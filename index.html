@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tester</title>
+    <meta charset="utf-8">
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script type="text/javascript">
+
+        function roundUp(num) {
+            precision = Math.pow(10, 1);
+            return Math.ceil(num);
+        }
+
+        var row = 0;
+        var column = 0;
+        var tileWidth = 3;
+        var tileHeight = 5;
+
+        function loadData(context, imagedata) {
+
+            var pixels = imagedata.data;
+
+            console.log("loadData()");
+            var client = new XMLHttpRequest();
+
+            console.log("reading file now...");
+            client.open('GET', '/pic1.base64block.txt');
+            client.onreadystatechange = function () {
+
+                if (this.readyState == 4 && this.status == 200) {
+                    console.log("ready state 4 and http status 200 ok");
+
+                    byteCharacters = atob(client.responseText);
+                    byteArray = new Array(byteCharacters.length);
+
+                    var canvasSizeSet = 0; // 1 when set
+
+                    for (let i = 0; i < byteCharacters.length;) {
+                        // b[i] = byteCharacters.charCodeAt(i);
+                        let value = byteCharacters.charCodeAt(i);
+                        if (value == 255) {
+
+                            if (canvasSizeSet === 0) {
+                                console.log("total columns found: " + i);
+
+                                var canvasWidthColumns = i;
+                                var canvasHeightRows = byteCharacters.length / canvasWidthColumns;
+                                console.log("setting canvas width columns: " + canvasWidthColumns + " canvas height rows: " + canvasHeightRows);
+
+                                // set the canvas here
+                                var canvasWidthPixels = canvasWidthColumns * tileWidth;
+                                var canvasHeightPixels = canvasHeightRows * tileHeight;
+                                canvasWidthPixels = roundUp(canvasWidthPixels);
+                                canvasHeightPixels = roundUp(canvasHeightPixels);
+
+                                console.log("setting canvas width pixels: " + canvasWidthPixels + " canvas height pixels: " + canvasHeightPixels);
+
+
+                                var newCanvas = $('<canvas/>',{
+                                    'class':'alan',
+                                    id: 'myCanvas'
+                                }).prop({
+                                    width: canvasWidthPixels,
+                                    height: canvasHeightPixels
+                                });
+                                $('#myCanvas').append(newCanvas);
+
+                                canvasSizeSet = 1;
+                            }
+
+                            // carriage return to left edge
+                            column = 0;
+
+                            // go down one row of blocks
+                            row++;
+
+                            i++;
+
+                        } else {
+
+                            // console.log("painting block at row: " + row + ", column: " + column);
+                            r = byteCharacters.charCodeAt(i);
+                            g = byteCharacters.charCodeAt(i + 1)
+                            b = byteCharacters.charCodeAt(i + 2);
+
+
+                            // Loop through each tile pixel
+                            for (var tr = 0; tr < tileHeight; tr++) {
+                                for (var tc = 0; tc < tileWidth; tc++) {
+                                    // Calculate the true position of the tile pixel
+                                    var trueX = (column * tileWidth) + tc;
+                                    var trueY = (row * tileHeight) + tr;
+
+                                    // Calculate the position of the current pixel in the array
+                                    var pos = (trueY * (imagedata.width * 4)) + (trueX * 4);
+
+                                    // Assign the colour to each pixel
+                                    pixels[pos] = r;
+                                    pixels[pos + 1] = g;
+                                    pixels[pos + 2] = b;
+                                    pixels[pos + 3] = 255;
+                                }
+                            }
+                            i += 3;
+                            column++;
+                        }
+                    }
+                    context.putImageData(imagedata, 0, 0);
+                }
+            }
+            client.send();
+        }
+
+        $(document).ready(function () {
+            console.log("document ready function");
+
+            // Creating a mosaic
+            var canvas = $("#myCanvas");
+            var context = canvas.get(0).getContext("2d");
+            var imagedata = context.createImageData(2000, 2000);
+
+            loadData(context, imagedata);
+        });
+    </script>
+</head>
+<body>
+<canvas id="myCanvas" class="alan" width="200" height="200" style="border: 1px; background-color: #770000">
+    Sorry, this browser does not support canvas.
+</canvas>
+</body>
+</html>
